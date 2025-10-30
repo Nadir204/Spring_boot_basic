@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Journal Frontend</title>
+    <style>
+        /* --- Basic Styling --- */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h2, h3 {
+            color: #007bff;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+            margin-top: 25px;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            box-sizing: border-box; /* Include padding and border in the element's total width and height */
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #1e7e34;
+        }
+
+        /* --- Result/Journal List Styling --- */
+        #result, #journalList {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e2f0fb;
+            border: 1px solid #b8daff;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        .journal-entry {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            background-color: #fff;
+        }
+        .journal-entry h4 {
+            color: #0056b3;
+            margin-top: 0;
+        }
+        .journal-entry p {
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+        .journal-entry small {
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>📝 Simple Journal Manager</h1>
+    </header>
+
+    <h2>🔍 Search Journal by ID</h2>
+    <input type="text" id="journalId" placeholder="Enter ObjectId (e.g., 60c72b1f9b1e8e50b8a4f0b2)">
+    <button onclick="searchJournal()" style="background-color: #007bff;">Search</button>
+    <button onclick="clearSearch()">Clear Search</button>
+
+    <h3>Result:</h3>
+    <pre id="result">Search result will appear here.</pre>
+
+    <hr>
+
+    <h2>➕ Add New Journal Entry</h2>
+    <input type="text" id="newTitle" placeholder="Title">
+    <textarea id="newContent" placeholder="Content" rows="4"></textarea>
+    <button onclick="addJournal()">Add Journal</button>
+
+    <hr>
+
+    <h2>📋 All Journal Entries</h2>
+    <div id="journalList">Loading journals...</div>
+</div>
+
+<script>
+    const API_BASE_URL = 'http://localhost:9090/journal';
+
+    // --- Helper Function ---
+    function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        try {
+            // Check for MongoDB $date format
+            const date = new Date(dateString.$date || dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        } catch {
+            return dateString;
+        }
+    }
+
+    // --- Core Functions ---
+
+    // 1. Load and Display All Journals
+    async function fetchAllJournals() {
+        const listDiv = document.getElementById('journalList');
+        listDiv.innerHTML = 'Loading journals...';
+
+        try {
+            const res = await fetch(API_BASE_URL + '/all');
+            const data = await res.json();
+
+            if (data && data.length > 0) {
+                listDiv.innerHTML = ''; // Clear 'Loading' message
+                data.forEach(journal => {
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = 'journal-entry';
+
+                    const title = journal.title || 'Untitled';
+                    const content = journal.content ? journal.content.substring(0, 100) + '...' : 'No content';
+                    const date = formatDate(journal.date);
+                    const id = journal.id.$oid || journal.id || 'N/A';
+
+                    entryDiv.innerHTML = `
+                        <h4>${title}</h4>
+                        <p>${content}</p>
+                        <small>Date: ${date} | ID: ${id}</small>
+                    `;
+                    listDiv.appendChild(entryDiv);
+                });
+            } else {
+                listDiv.innerText = 'No journal entries found.';
+            }
+        } catch (err) {
+            console.error('Error fetching all journals:', err);
+            listDiv.innerText = 'Error fetching journal list!';
+        }
+    }
+
+    // 2. Search Journal by ID (your original function, enhanced)
+    async function searchJournal() {
+        let id = document.getElementById('journalId').value.trim();
+        if (!id) {
+            document.getElementById('result').innerText = "Please enter a valid ObjectId.";
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/id/${id}`);
+            // Check for a successful response but possibly empty body (e.g., 204 No Content)
+            if (res.status === 204 || res.headers.get('content-length') === '0') {
+                 document.getElementById('result').innerText = "No journal found with that ID.";
+                 return;
+            }
+
+            const data = await res.json();
+
+            if(data && data.title) { // Check if data is a valid object with a title
+                const journalId = data.id.$oid ? data.id.$oid : data.id;
+                document.getElementById('result').innerText =
+                `Title: ${data.title}\nContent: ${data.content}\nDate: ${formatDate(data.date)}\nID: ${journalId}`;
+            } else {
+                document.getElementById('result').innerText = "No journal found!";
+            }
+        } catch(err) {
+            console.error('Search error:', err);
+            document.getElementById('result').innerText = "Error fetching data! Check the console for details.";
+        }
+    }
+
+    function clearSearch() {
+        document.getElementById('journalId').value = '';
+        document.getElementById('result').innerText = "Search result cleared.";
+    }
+
+    // 3. Add New Journal Entry
+    async function addJournal() {
+        const title = document.getElementById('newTitle').value.trim();
+        const content = document.getElementById('newContent').value.trim();
+
+        if (!title || !content) {
+            alert("Title and Content cannot be empty!");
+            return;
+        }
+
+        const newJournal = {
+            title: title,
+            content: content
+            // Assuming your backend adds the date and ID automatically
+        };
+
+        try {
+            const res = await fetch(API_BASE_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newJournal)
+            });
+
+            if (res.ok) {
+                const addedJournal = await res.json();
+                alert(`Journal added successfully!\nID: ${addedJournal.id.$oid || addedJournal.id}`);
+
+                // Clear the form
+                document.getElementById('newTitle').value = '';
+                document.getElementById('newContent').value = '';
+
+                // Refresh the list
+                fetchAllJournals();
+            } else {
+                alert('Failed to add journal. Status: ' + res.status);
+            }
+        } catch (err) {
+            console.error('Add journal error:', err);
+            alert('Error connecting to the server!');
+        }
+    }
+
+    // Load all journals when the page loads
+    window.onload = fetchAllJournals;
+
+</script>
+</body>
+</html>

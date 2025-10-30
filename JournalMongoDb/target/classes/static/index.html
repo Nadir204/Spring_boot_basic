@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Journal Frontend</title>
+</head>
+<body>
+<h2>Search Journal by ID</h2>
+<input type="text" id="journalId" placeholder="Enter ObjectId">
+<button onclick="searchJournal()">Search</button>
+
+<h3>Result:</h3>
+<pre id="result"></pre>
+
+<script>
+    function searchJournal() {
+        let id = document.getElementById('journalId').value;
+        fetch(`http://localhost:9090/journal/id/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                if(data) {
+                    document.getElementById('result').innerText =
+                    `Title: ${data.title}\nContent: ${data.content}\nDate: ${data.date}\nID: ${data.id.$oid ? data.id.$oid : data.id}`;
+                } else {
+                    document.getElementById('result').innerText = "No journal found!";
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('result').innerText = "Error fetching data!";
+            });
+    }
+</script>
+</body>
+</html>

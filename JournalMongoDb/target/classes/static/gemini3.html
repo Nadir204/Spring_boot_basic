@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Journal Frontend - CRUD Complete</title>
+  <style>
+    /* --- General & Layout Styling --- */
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f4f7f6;
+        color: #333;
+    }
+    .container {
+        max-width: 1000px;
+        margin: auto;
+        background: #fff;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+        color: #17a2b8;
+        text-align: center;
+    }
+    h2 {
+        color: #007bff;
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 10px;
+        margin-top: 25px;
+    }
+    .section-box {
+        border: 1px solid #ddd;
+        padding: 20px;
+        margin-bottom: 30px;
+        border-radius: 6px;
+        background-color: #fcfcfc;
+    }
+
+    /* --- Form & Button Styling --- */
+    input[type="text"], textarea {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 15px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+    button {
+        background-color: #28a745;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        margin-right: 10px;
+    }
+    button:hover {
+        opacity: 0.9;
+    }
+    /* Specific Button Colors */
+    .search-button { background-color: #007bff; }
+    .delete-button { background-color: #dc3545; }
+    .update-button { background-color: #ffc107; color: #333; }
+    .show-all-button { background-color: #17a2b8; margin-bottom: 15px; }
+
+    /* --- Result & List Display --- */
+    #result {
+        margin-top: 20px;
+        padding: 15px;
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+        border-radius: 4px;
+        white-space: pre-wrap;
+        min-height: 50px;
+    }
+    #journalList {
+        margin-top: 15px;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    .journal-entry {
+        border: 1px solid #ddd;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-left: 5px solid #17a2b8;
+        border-radius: 4px;
+        background-color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>📝 Simple Journal Manager - CRUD</h1>
+  </header>
+
+  <div class="section-box">
+    <h2>🔍 Search Journal</h2>
+    <input type="text" id="journalId" placeholder="Enter Journal ObjectId">
+    <button onclick="searchJournal()" class="search-button">Search</button>
+    <button onclick="clearSearch()" style="background-color: #6c757d;">Clear Result</button>
+
+    <h3 style="margin-top: 20px;">Search Result:</h3>
+    <pre id="result">Result will appear here.</pre>
+  </div>
+
+  <div class="section-box">
+    <h2>➕ Insert New Entry</h2>
+    <input type="text" id="newTitle" placeholder="Title">
+    <textarea id="newContent" placeholder="Content" rows="4"></textarea>
+    <button onclick="addJournal()">Insert Journal</button>
+  </div>
+
+  <div class="section-box">
+    <h2>✏️ Update (Edit) Entry</h2>
+    <input type="text" id="updateId" placeholder="Enter ID of Entry to Update">
+    <input type="text" id="updateTitle" placeholder="New Title (Leave blank to keep old title)">
+    <textarea id="updateContent" placeholder="New Content (Leave blank to keep old content)" rows="3"></textarea>
+    <button onclick="updateJournal()" class="update-button">Update Entry</button>
+  </div>
+
+  <div class="section-box">
+    <h2>🗑️ Delete Entry</h2>
+    <input type="text" id="deleteId" placeholder="Enter ID of Entry to DELETE">
+    <button onclick="deleteJournal()" class="delete-button">Confirm Delete</button>
+  </div>
+
+
+  <div class="section-box">
+    <h2>📋 Show All Data</h2>
+    <button onclick="fetchAllJournals()" class="show-all-button">Show All Data / Refresh List</button>
+    <div id="journalList">Loading journals...</div>
+  </div>
+
+</div>
+
+<script>
+  const API_BASE_URL = 'http://localhost:9090/journal';
+
+  // --- Helper Functions ---
+  function formatDate(dateString) {
+      if (!dateString) return 'N/A';
+      try {
+          const date = new Date(dateString.$date || dateString);
+          return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+      } catch {
+          return dateString;
+      }
+  }
+
+  // --- Core Functions ---
+
+  // 1. SHOW ALL (GET /journal)
+  async function fetchAllJournals() {
+      const listDiv = document.getElementById('journalList');
+      document.getElementById('result').innerText = "List refreshed.";
+      listDiv.innerHTML = 'Loading journals...';
+
+      try {
+          const res = await fetch(API_BASE_URL);
+
+          if (!res.ok) {
+              throw new Error(`Server status: ${res.status} ${res.statusText}`);
+          }
+
+          const data = await res.json();
+
+          if (data && data.length > 0) {
+              listDiv.innerHTML = '';
+              data.forEach(journal => {
+                  const entryDiv = document.createElement('div');
+                  entryDiv.className = 'journal-entry';
+
+                  const title = journal.title || 'Untitled';
+                  const content = journal.content ? journal.content.substring(0, 100) + (journal.content.length > 100 ? '...' : '') : 'No content';
+                  const date = formatDate(journal.date);
+                  const id = journal.id.$oid || journal.id || 'N/A';
+
+                  entryDiv.innerHTML = `
+                      <h4>${title}</h4>
+                      <p>${content}</p>
+                      <small>Date: ${date} | ID: ${id}</small>
+                  `;
+                  listDiv.appendChild(entryDiv);
+              });
+          } else {
+              listDiv.innerText = 'No journal entries found.';
+          }
+      } catch (err) {
+          console.error('Fetch Error:', err);
+          listDiv.innerHTML = `<pre style="color: red; background: #ffebeb; padding: 15px; border: 1px dashed red;">🚫 Connection Error 🚫\n${err.message}. Please verify backend status.</pre>`;
+      }
+  }
+
+  // 2. SEARCH BY ID (GET /journal/id/{myId})
+  async function searchJournal() {
+      let id = document.getElementById('journalId').value.trim();
+      const resultElement = document.getElementById('result');
+
+      if (!id) {
+          resultElement.innerText = "Please enter a valid ObjectId.";
+          return;
+      }
+
+      try {
+          const res = await fetch(`${API_BASE_URL}/id/${id}`);
+
+          if (res.status === 404 || res.status === 204) {
+               resultElement.innerText = "No journal found with that ID (404 Not Found).";
+               return;
+          }
+          if (!res.ok) {
+               throw new Error(`Server status: ${res.status} ${res.statusText}`);
+          }
+
+          const data = await res.json();
+
+          if(data && data.title) {
+              const journalId = data.id.$oid ? data.id.$oid : data.id;
+              resultElement.innerText =
+              `Title: ${data.title}\nContent: ${data.content}\nDate: ${formatDate(data.date)}\nID: ${journalId}`;
+          } else {
+              resultElement.innerText = "No journal found!";
+          }
+      } catch(err) {
+          console.error('Search error:', err);
+          resultElement.innerText = `Error fetching data: ${err.message}. Check the console.`;
+      }
+  }
+
+  function clearSearch() {
+      document.getElementById('journalId').value = '';
+      document.getElementById('result').innerText = "Search result cleared.";
+  }
+
+  // 3. INSERT (POST /journal)
+  async function addJournal() {
+      const title = document.getElementById('newTitle').value.trim();
+      const content = document.getElementById('newContent').value.trim();
+
+      if (!title || !content) {
+          alert("Title and Content cannot be empty!");
+          return;
+      }
+
+      const newJournal = {
+          title: title,
+          content: content
+      };
+
+      try {
+          const res = await fetch(API_BASE_URL, {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(newJournal)
+          });
+
+          if (res.ok) {
+              alert(`Journal inserted successfully!`);
+
+              document.getElementById('newTitle').value = '';
+              document.getElementById('newContent').value = '';
+
+              fetchAllJournals();
+          } else {
+              alert(`Failed to insert journal. Status: ${res.status} - ${res.statusText}`);
+          }
+      } catch (err) {
+          console.error('Insert journal error:', err);
+          alert('An unexpected error occurred during insertion. Check the browser console.');
+      }
+  }
+
+  // 4. UPDATE (PUT /journal/id/{id})
+  async function updateJournal() {
+      const id = document.getElementById('updateId').value.trim();
+      const title = document.getElementById('updateTitle').value.trim();
+      const content = document.getElementById('updateContent').value.trim();
+
+      if (!id) {
+          alert("Please enter the ID of the journal to update.");
+          return;
+      }
+
+      // Your backend logic allows sending partial updates (empty string = keep old value)
+      const updateData = {};
+      if (title !== "") {
+          updateData.title = title;
+      }
+      if (content !== "") {
+          updateData.content = content;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+           alert("Please enter a new Title or new Content to update.");
+           return;
+      }
+
+      try {
+          const res = await fetch(`${API_BASE_URL}/id/${id}`, {
+              method: 'PUT',
+              headers: {
+                  'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(updateData)
+          });
+
+          if (res.ok) {
+              // Backend returns the updated object on success
+              const updatedEntry = await res.json();
+              alert(`Journal ID ${id} updated successfully! New Title: ${updatedEntry.title}`);
+
+              document.getElementById('updateId').value = '';
+              document.getElementById('updateTitle').value = '';
+              document.getElementById('updateContent').value = '';
+
+              fetchAllJournals();
+          } else if (res.status === 404) {
+               alert(`Update failed: Journal ID ${id} not found.`);
+          } else {
+               alert(`Update failed. Status: ${res.status} - ${res.statusText}`);
+          }
+      } catch (err) {
+          console.error('Update error:', err);
+          alert('An unexpected error occurred during update. Check the browser console.');
+      }
+  }
+
+  // 5. DELETE (DELETE /journal/id/{myId})
+  async function deleteJournal() {
+      const id = document.getElementById('deleteId').value.trim();
+
+      if (!id) {
+          alert("Please enter the ID of the journal to delete.");
+          return;
+      }
+
+      if (!confirm(`Are you sure you want to PERMANENTLY delete the journal with ID: ${id}?`)) {
+          return;
+      }
+
+      try {
+          const res = await fetch(`${API_BASE_URL}/id/${id}`, {
+              method: 'DELETE'
+          });
+
+          // Your backend returns true (200 OK) on success.
+          if (res.ok) {
+              alert(`Journal ID ${id} deleted successfully!`);
+              document.getElementById('deleteId').value = '';
+              fetchAllJournals();
+          } else {
+              alert(`Delete failed. Status: ${res.status} - ${res.statusText}. Check ID.`);
+          }
+      } catch (err) {
+          console.error('Delete error:', err);
+          alert('An unexpected error occurred during deletion. Check the browser console.');
+      }
+  }
+
+
+  // Load all journals when the page loads automatically
+  window.onload = fetchAllJournals;
+</script>
+</body>
+</html>
