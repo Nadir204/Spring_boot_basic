@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>📚 Library Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-100 to-indigo-200 min-h-screen flex flex-col items-center p-6">
+
+<h1 class="text-4xl font-bold text-indigo-700 mb-6">Library Management System</h1>
+
+<div class="grid md:grid-cols-2 gap-6 w-full max-w-5xl">
+
+    <!-- Add Book -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+        <h2 class="text-xl font-semibold mb-3 text-indigo-600">Add New Book</h2>
+        <input id="addCustomId" type="number" placeholder="Custom Book ID" class="input">
+        <input id="addTitle" type="text" placeholder="Title" class="input">
+        <input id="addAuthor" type="text" placeholder="Author" class="input">
+        <input id="addQuantity" type="number" placeholder="Quantity" class="input">
+        <button onclick="addBook()" class="btn bg-indigo-600 hover:bg-indigo-700">Add Book</button>
+    </div>
+
+    <!-- Borrow Book -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+        <h2 class="text-xl font-semibold mb-3 text-indigo-600">Borrow Book</h2>
+        <input id="borrowId" type="number" placeholder="Custom Book ID" class="input">
+        <input id="borrowQty" type="number" placeholder="Quantity" class="input">
+        <button onclick="borrowBook()" class="btn bg-green-600 hover:bg-green-700">Borrow</button>
+    </div>
+
+    <!-- Update Book -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+        <h2 class="text-xl font-semibold mb-3 text-indigo-600">Update Book</h2>
+        <input id="updateId" type="number" placeholder="Custom Book ID" class="input">
+        <input id="updateTitle" type="text" placeholder="New Title" class="input">
+        <input id="updateAuthor" type="text" placeholder="New Author" class="input">
+        <input id="updateQty" type="number" placeholder="New Quantity" class="input">
+        <button onclick="updateBook()" class="btn bg-yellow-500 hover:bg-yellow-600">Update</button>
+    </div>
+
+    <!-- Delete Book -->
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+        <h2 class="text-xl font-semibold mb-3 text-indigo-600">Delete Book</h2>
+        <input id="deleteId" type="number" placeholder="Custom Book ID" class="input">
+        <button onclick="deleteBook()" class="btn bg-red-600 hover:bg-red-700">Delete</button>
+    </div>
+
+</div>
+
+<!-- View All -->
+<div class="bg-white rounded-2xl shadow-lg p-6 mt-6 w-full max-w-5xl">
+    <h2 class="text-2xl font-semibold mb-3 text-indigo-700">All Books</h2>
+    <button onclick="loadBooks()" class="btn bg-blue-600 hover:bg-blue-700 mb-3">Refresh List</button>
+    <div id="bookList" class="overflow-auto max-h-80"></div>
+</div>
+
+<script>
+    const baseURL = "http://localhost:9090/books";
+
+    function makeBookCard(book) {
+      return `
+        <div class="border rounded-xl p-3 mb-2 shadow-sm hover:bg-gray-50 transition">
+          <p><strong>ID:</strong> ${book.customBookId}</p>
+          <p><strong>Title:</strong> ${book.title}</p>
+          <p><strong>Author:</strong> ${book.author}</p>
+          <p><strong>Quantity:</strong> ${book.quantity}</p>
+        </div>`;
+    }
+
+    async function loadBooks() {
+      const res = await fetch(baseURL);
+      const books = await res.json();
+      document.getElementById('bookList').innerHTML = books.map(makeBookCard).join('');
+    }
+
+    async function addBook() {
+      const data = {
+        customBookId: +document.getElementById('addCustomId').value,
+        title: document.getElementById('addTitle').value,
+        author: document.getElementById('addAuthor').value,
+        quantity: +document.getElementById('addQuantity').value
+      };
+      await fetch(baseURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      alert("✅ Book Added!");
+      loadBooks();
+    }
+
+    async function borrowBook() {
+      const id = document.getElementById('borrowId').value;
+      const qty = document.getElementById('borrowQty').value;
+      const res = await fetch(`${baseURL}/borrow/${id}/${qty}`, { method: "POST" });
+      alert(await res.text());
+      loadBooks();
+    }
+
+    async function updateBook() {
+      const id = document.getElementById('updateId').value;
+      const data = {
+        customBookId: +id,
+        title: document.getElementById('updateTitle').value,
+        author: document.getElementById('updateAuthor').value,
+        quantity: +document.getElementById('updateQty').value
+      };
+      await fetch(`${baseURL}/customUpdate/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      alert("✅ Book Updated!");
+      loadBooks();
+    }
+
+    async function deleteBook() {
+      const id = document.getElementById('deleteId').value;
+      await fetch(`${baseURL}/DeleteByCustom/${id}`, { method: "DELETE" });
+      alert("🗑️ Book Deleted!");
+      loadBooks();
+    }
+
+    loadBooks();
+</script>
+
+<style>
+    .input {
+      display: block;
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 8px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+    }
+    .btn {
+      color: white;
+      padding: 8px 16px;
+      border-radius: 10px;
+      width: 100%;
+    }
+</style>
+
+</body>
+</html>

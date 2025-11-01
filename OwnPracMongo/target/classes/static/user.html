@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>📚 Library User</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-100 to-indigo-200 min-h-screen flex flex-col items-center p-6">
+
+<h1 class="text-4xl font-bold text-indigo-700 mb-6">Library User Dashboard</h1>
+
+<!-- View All Books -->
+<div class="bg-white rounded-2xl shadow-lg p-6 w-full max-w-6xl hover:shadow-[0_0_20px_rgba(99,102,241,0.5)] transition">
+  <h2 class="text-2xl font-semibold mb-3 text-indigo-700">All Books</h2>
+  <button onclick="fetchBooks()" class="btn bg-blue-600 hover:bg-blue-700 mb-3 w-auto px-6">Refresh List</button>
+  <div id="bookList" class="grid md:grid-cols-3 gap-6"></div>
+</div>
+
+<style>
+  .input {
+    display:block; width:100%; margin-top:10px; padding:8px; border-radius:10px; border:1px solid #ccc;
+  }
+  .btn {
+    color:white; padding:8px 16px; border-radius:10px; width:100%; margin-top:5px;
+  }
+</style>
+
+<script>
+  const baseUrl = "https://081eeafd89a7.ngrok-free.app/books";
+
+  function makeBookCard(book){
+    return `
+      <div class="border rounded-xl p-4 shadow-sm hover:shadow-[0_0_15px_rgba(99,102,241,0.5)] transition flex flex-col">
+        <p><strong>CustomBookId:</strong> ${book.customBookId}</p>
+        <p><strong>Title:</strong> ${book.title}</p>
+        <p><strong>Author:</strong> ${book.author}</p>
+        <p><strong>Quantity:</strong> ${book.quantity}</p>
+        <input id="qty-${book.customBookId}" type="number" min="1" max="${book.quantity}" placeholder="Qty to borrow" class="input">
+        <button onclick="borrowBook(${book.customBookId})" class="btn bg-green-600 hover:bg-green-700 mt-2">Borrow</button>
+      </div>`;
+  }
+
+  async function fetchBooks(){
+    const container = document.getElementById("bookList");
+    container.innerHTML = "<p class='text-gray-400 col-span-full text-center'>Loading...</p>";
+    try{
+      const res = await fetch(baseUrl, {
+        headers: {"ngrok-skip-browser-warning": "true"}
+      });
+      if(!res.ok) throw new Error("Failed to fetch");
+      const books = await res.json();
+      container.innerHTML = books.length ? books.map(makeBookCard).join('') : "<p class='text-gray-400 col-span-full text-center'>No books available</p>";
+    } catch(err){
+      console.error(err);
+      container.innerHTML = "<p class='text-red-400 col-span-full text-center'>❌ Failed to load books. Check backend or ngrok URL.</p>";
+    }
+  }
+
+  function borrowBook(customBookId){
+    console.log("=== BORROW FUNCTION CALLED ===");
+    console.log("CustomBookId:", customBookId);
+
+    const qtyInput = document.getElementById("qty-" + customBookId);
+    console.log("Input element found:", qtyInput);
+
+    if(!qtyInput) {
+      alert("❌ Error: Could not find input field!");
+      return;
+    }
+
+    const quantity = qtyInput.value;
+    console.log("Quantity entered:", quantity);
+
+    if(!quantity || quantity <= 0){
+      alert("⚠️ Please enter a valid quantity");
+      return;
+    }
+
+    const url = `${baseUrl}/borrow/${customBookId}/${quantity}`;
+    console.log("Calling URL:", url);
+
+    fetch(url, {
+      method: "POST",
+      headers: {"ngrok-skip-browser-warning": "true"}
+    })
+    .then(res => {
+      console.log("Response received, status:", res.status);
+      return res.text().then(text => ({status: res.status, text: text, ok: res.ok}));
+    })
+    .then(data => {
+      console.log("Response data:", data);
+      alert(data.text);
+      if(data.ok) {
+        qtyInput.value = "";
+        fetchBooks();
+      }
+    })
+    .catch(err => {
+      console.error("Fetch error:", err);
+      alert("❌ Failed to borrow: " + err.message);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', fetchBooks);
+</script>
+
+</body>
+</html>

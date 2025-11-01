@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>📚 Library Admin Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-100 to-indigo-200 min-h-screen flex flex-col items-center p-6">
+
+<h1 class="text-4xl font-bold text-indigo-700 mb-6">Library Admin Dashboard</h1>
+
+<div class="grid md:grid-cols-2 gap-6 w-full max-w-5xl">
+
+  <!-- Add Book -->
+  <div class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-[0_0_20px_rgba(99,102,241,0.5)] transition">
+    <h2 class="text-xl font-semibold mb-3 text-indigo-600">Add New Book</h2>
+    <input id="addCustomId" type="number" placeholder="Custom Book ID" class="input">
+    <input id="addTitle" type="text" placeholder="Title" class="input">
+    <input id="addAuthor" type="text" placeholder="Author" class="input">
+    <input id="addQuantity" type="number" placeholder="Quantity" class="input">
+    <button onclick="addBook()" class="btn bg-indigo-600 hover:bg-indigo-700">Add Book</button>
+  </div>
+
+  <!-- Update Book -->
+  <div class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-[0_0_20px_rgba(234,179,8,0.5)] transition">
+    <h2 class="text-xl font-semibold mb-3 text-yellow-600">Update Book</h2>
+    <input id="updateId" type="number" placeholder="Custom Book ID" class="input">
+    <input id="updateTitle" type="text" placeholder="New Title" class="input">
+    <input id="updateAuthor" type="text" placeholder="New Author" class="input">
+    <input id="updateQty" type="number" placeholder="New Quantity" class="input">
+    <button onclick="updateBook()" class="btn bg-yellow-500 hover:bg-yellow-600">Update</button>
+  </div>
+
+  <!-- Delete Book -->
+  <div class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-[0_0_20px_rgba(239,68,68,0.5)] transition">
+    <h2 class="text-xl font-semibold mb-3 text-red-600">Delete Book</h2>
+    <input id="deleteId" type="number" placeholder="Custom Book ID" class="input">
+    <button onclick="deleteBook()" class="btn bg-red-600 hover:bg-red-700">Delete</button>
+  </div>
+
+</div>
+
+<!-- View All Books -->
+<div class="bg-white rounded-2xl shadow-lg p-6 mt-6 w-full max-w-5xl hover:shadow-[0_0_20px_rgba(99,102,241,0.5)] transition">
+  <h2 class="text-2xl font-semibold mb-3 text-indigo-700">All Books</h2>
+  <button onclick="fetchBooks()" class="btn bg-blue-600 hover:bg-blue-700 mb-3">Refresh List</button>
+  <div id="bookList" class="grid md:grid-cols-3 gap-4"></div>
+</div>
+
+<style>
+  .input {
+    display:block; width:100%; margin-bottom:10px; padding:8px; border-radius:10px; border:1px solid #ccc;
+  }
+  .btn {
+    color:white; padding:8px 16px; border-radius:10px; width:100%;
+  }
+</style>
+
+<script>
+  const baseUrl = "https://081eeafd89a7.ngrok-free.app/books";
+
+  // Helper headers for ngrok
+  const ngrokHeaders = {
+    "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "true"
+  };
+
+  function makeBookCard(book){
+    return `
+      <div class="border rounded-xl p-3 shadow-sm hover:bg-gray-50 transition">
+        <p><strong>CustomBookId:</strong> ${book.customBookId}</p>
+        <p><strong>Title:</strong> ${book.title}</p>
+        <p><strong>Author:</strong> ${book.author}</p>
+        <p><strong>Quantity:</strong> ${book.quantity}</p>
+      </div>`;
+  }
+
+  async function fetchBooks(){
+    const container = document.getElementById("bookList");
+    container.innerHTML = "<p class='text-gray-400'>Loading...</p>";
+    try {
+      const res = await fetch(baseUrl, {
+        headers: {"ngrok-skip-browser-warning": "true"}
+      });
+      if(!res.ok) throw new Error("Failed to fetch");
+      const books = await res.json();
+      container.innerHTML = books.length ? books.map(makeBookCard).join('') : "<p class='text-gray-400'>No books available</p>";
+    } catch(err){
+      console.error(err);
+      container.innerHTML = "<p class='text-red-400'>❌ Failed to load books. Check backend or ngrok URL.</p>";
+    }
+  }
+
+  async function addBook(){
+    const data = {
+      customBookId: +document.getElementById('addCustomId').value,
+      title: document.getElementById('addTitle').value,
+      author: document.getElementById('addAuthor').value,
+      quantity: +document.getElementById('addQuantity').value
+    };
+    await fetch(baseUrl, {
+      method:"POST",
+      headers: ngrokHeaders,
+      body:JSON.stringify(data)
+    });
+    alert("✅ Book Added!");
+    fetchBooks();
+  }
+
+  async function updateBook(){
+    const id = document.getElementById('updateId').value;
+    const data = {
+      customBookId: +id,
+      title: document.getElementById('updateTitle').value,
+      author: document.getElementById('updateAuthor').value,
+      quantity: +document.getElementById('updateQty').value
+    };
+    await fetch(`${baseUrl}/customUpdate/${id}`, {
+      method:"PUT",
+      headers: ngrokHeaders,
+      body:JSON.stringify(data)
+    });
+    alert("✅ Book Updated!");
+    fetchBooks();
+  }
+
+  async function deleteBook(){
+    const id = document.getElementById('deleteId').value;
+    await fetch(`${baseUrl}/DeleteByCustom/${id}`, {
+      method:"DELETE",
+      headers: {"ngrok-skip-browser-warning": "true"}
+    });
+    alert("🗑️ Book Deleted!");
+    fetchBooks();
+  }
+
+  // Wait for DOM to be fully loaded before fetching
+  document.addEventListener('DOMContentLoaded', fetchBooks);
+</script>
+
+</body>
+</html>
